@@ -2,8 +2,8 @@
 InsightLens: Financial Behavior Analytics Dashboard
 Interactive Streamlit Web Application
 
-Group 3: Kai Martin, Deborah Robinson
-CS633: Data Mining
+Group 3
+CS633: Data Mining Project
 """
 
 import streamlit as st
