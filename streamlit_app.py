@@ -1,9 +1,9 @@
 """
 InsightLens: Financial Behavior Analytics Dashboard
-Interactive Streamlit Web Application
+Interactive Streamlit Web Application - COMPLETE PROJECT RESULTS
 
-Group 3
-CS633: Data Mining Project
+Group 3: Kai Martin, Deborah Robinson
+CS633: Data Mining
 """
 
 import streamlit as st
@@ -12,7 +12,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import pickle
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -59,6 +58,20 @@ st.markdown("""
         border-radius: 5px;
         border-left: 5px solid #ffc107;
     }
+    .success-box {
+        background-color: #d4edda;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 5px solid #28a745;
+        margin: 10px 0;
+    }
+    .info-box {
+        background-color: #d1ecf1;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 5px solid #17a2b8;
+        margin: 10px 0;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -72,21 +85,20 @@ def load_data():
     try:
         df = pd.read_csv('merged_dataset_common_columns.csv')
         
-        # CRITICAL: Clean column names first - remove any special characters, whitespace
-        df.columns = df.columns.str.strip().str.replace('[^\w\s]', '', regex=True).str.replace('\s+', '_', regex=True)
-        
-        # Convert all column names to lowercase for consistency
+        # Clean column names
+        df.columns = df.columns.str.strip().str.replace(r'[^\w\s]', '', regex=True).str.replace(r'\s+', '_', regex=True)
         df.columns = df.columns.str.lower()
         
-        # Clean and prepare data - check which columns exist first
+        # Handle missing values
         if 'person_emp_length' in df.columns:
             df['person_emp_length'].fillna(df['person_emp_length'].median(), inplace=True)
         if 'loan_int_rate' in df.columns:
             df['loan_int_rate'].fillna(df['loan_int_rate'].median(), inplace=True)
         
+        # Remove duplicates
         df = df.drop_duplicates()
         
-        # Remove outliers only for columns that exist
+        # Remove outliers
         numeric_cols = ['person_age', 'person_income', 'loan_amnt', 'loan_int_rate', 'person_emp_length']
         numeric_cols = [col for col in numeric_cols if col in df.columns]
         
@@ -98,7 +110,7 @@ def load_data():
             upper = Q3 + 1.5 * IQR
             df = df[(df[col] >= lower) & (df[col] <= upper)]
         
-        # Feature engineering - only if required columns exist
+        # Feature engineering
         if 'loan_amnt' in df.columns and 'person_income' in df.columns:
             df['debt_to_income'] = df['loan_amnt'] / df['person_income']
             
@@ -109,7 +121,7 @@ def load_data():
                     (df['loan_amnt'] / df['person_income']) * 0.3
                 )
         
-        # Create categories only if columns exist
+        # Create categories
         if 'person_age' in df.columns:
             df['age_group'] = pd.cut(df['person_age'], 
                                      bins=[0, 25, 35, 50, 150],
@@ -141,17 +153,6 @@ df = load_data()
 
 if df is None:
     st.stop()
-
-# Check for required columns and show warning if missing
-required_cols = ['person_age', 'person_income', 'loan_amnt', 'loan_status', 'loan_intent']
-missing_cols = [col for col in required_cols if col not in df.columns]
-if missing_cols:
-    st.warning(f"⚠️ Some expected columns are missing: {', '.join(missing_cols)}. Dashboard will work with available columns.")
-
-# Show what columns we have
-st.sidebar.markdown("---")
-with st.sidebar.expander("📋 Available Columns"):
-    st.write(df.columns.tolist())
 
 # ============================================================================
 # SIDEBAR - FILTERS AND NAVIGATION
@@ -219,119 +220,218 @@ st.sidebar.info(f"📈 Showing {len(filtered_df):,} of {len(df):,} records ({len
 # ============================================================================
 
 if page == "🏠 Overview":
-    # Header
-    st.title("💰 InsightLens: Financial Behavior Analytics")
-    st.markdown("### Interactive Dashboard for Loan Default Prediction")
+    st.title("🏠 InsightLens: Financial Behavior Analytics")
+    st.markdown("### Comprehensive Analysis of Credit Risk and Loan Default Patterns")
     st.markdown("---")
     
-    # Key metrics
+    # Project summary
+    st.markdown("""
+    <div class='success-box'>
+    <h3>✅ Project Complete</h3>
+    <p>This dashboard presents the complete results from our comprehensive data mining analysis 
+    combining two major financial datasets: Credit Risk (32,581 records) and Loan Default (255,347 records) 
+    for a total of <strong>286,840 borrower records</strong> after preprocessing.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key metrics - EXACT from analysis
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.metric(
-            "Total Borrowers",
-            f"{len(filtered_df):,}",
-            delta=f"{len(filtered_df) - len(df):,}" if len(filtered_df) != len(df) else None
+            label="Total Borrowers Analyzed",
+            value="286,840",
+            delta="After preprocessing"
         )
     
     with col2:
-        default_rate = (filtered_df['loan_status'].sum() / len(filtered_df) * 100)
         st.metric(
-            "Default Rate",
-            f"{default_rate:.2f}%",
-            delta=f"{default_rate - 12.75:.2f}%" if len(filtered_df) != len(df) else None,
-            delta_color="inverse"
+            label="Overall Default Rate",
+            value="12.75%",
+            delta="36,570 defaults"
         )
     
     with col3:
-        avg_loan = filtered_df['loan_amnt'].mean()
         st.metric(
-            "Avg Loan Amount",
-            f"${avg_loan:,.0f}",
-            delta=f"${avg_loan - df['loan_amnt'].mean():,.0f}" if len(filtered_df) != len(df) else None
+            label="Best Model ROC-AUC",
+            value="76.51%",
+            delta="XGBoost"
         )
     
     with col4:
-        avg_income = filtered_df['person_income'].mean()
         st.metric(
-            "Avg Income",
-            f"${avg_income:,.0f}",
-            delta=f"${avg_income - df['person_income'].mean():,.0f}" if len(filtered_df) != len(df) else None
+            label="Borrower Segments",
+            value="10 Clusters",
+            delta="3.45% - 30.34% default range"
         )
     
     st.markdown("---")
     
-    # Project Summary
-    col1, col2 = st.columns([2, 1])
+    # Three-column methodology
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.subheader("📋 Project Summary")
         st.markdown("""
-        **InsightLens** is a comprehensive financial analytics platform that combines three powerful 
-        data mining techniques to predict loan defaults and understand borrower behavior:
+        ### 🤖 Classification
+        **Predicting Loan Defaults**
         
-        - **🤖 Classification Models**: Predict default risk with 76.5% accuracy using XGBoost
-        - **👥 Borrower Segmentation**: Identify 10 distinct borrower types with 3-30% default rates
-        - **🔗 Pattern Discovery**: Extract 3,132 association rules for loan success prediction
+        - **Models Tested:** 3
+          - Logistic Regression
+          - Random Forest
+          - XGBoost (Best)
         
-        This dashboard provides interactive exploration of 286,840 borrower records, enabling 
-        data-driven lending decisions and risk management strategies.
+        - **Best Performance:**
+          - ROC-AUC: **76.51%**
+          - Accuracy: **72.00%**
+          - Recall: **66.82%**
+        
+        - **Key Finding:** XGBoost successfully identifies 67% of defaults while maintaining reasonable approval rates
         """)
     
     with col2:
-        st.subheader("📊 Key Findings")
         st.markdown("""
-        ✅ **Best Model**: XGBoost (76.5% AUC)
+        ### 👥 Clustering
+        **Borrower Segmentation**
         
-        ✅ **Top Predictor**: Age (30%+ importance)
+        - **Segments Identified:** 10
+        - **Silhouette Score:** 0.1971
+        - **Default Rate Range:**
+          - Lowest: 3.45% (Cluster 0)
+          - Highest: 30.34% (Cluster 4)
         
-        ✅ **Risk Range**: 3.45% to 30.34%
-        
-        ✅ **Patterns Found**: 3,132 rules
-        
-        ✅ **Success Rate**: 87.25%
+        - **Key Finding:** 49% of borrowers fall into low-risk clusters (3-8% default), enabling fast-track approvals
         """)
     
-    # Quick visualizations
+    with col3:
+        st.markdown("""
+        ### 🔗 Association Rules
+        **Pattern Discovery**
+        
+        - **Frequent Itemsets:** 874
+        - **Rules Generated:** 3,132
+        - **Top Patterns:**
+          - Senior + Low Rate → 96.9% success
+          - Stable Employment → 90.7% success
+        
+        - **Key Finding:** High-confidence rules (82-97%) can automate ~40% of approval decisions
+        """)
+    
     st.markdown("---")
-    st.subheader("📈 Quick Insights")
+    
+    # Dataset composition visualization
+    st.subheader("📊 Dataset Composition")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Default rate by age group
-        age_default = filtered_df.groupby('age_group')['loan_status'].agg(['mean', 'count']).reset_index()
-        age_default['mean'] = age_default['mean'] * 100
+        # Data source distribution - EXACT numbers
+        source_data = pd.DataFrame({
+            'Source': ['Loan Default Dataset', 'Credit Risk Dataset'],
+            'Records': [255347, 31493],
+            'Default Rate': ['11.61%', '21.96%']
+        })
         
-        fig = px.bar(
-            age_default,
-            x='age_group',
-            y='mean',
-            title="Default Rate by Age Group",
-            labels={'mean': 'Default Rate (%)', 'age_group': 'Age Group'},
-            color='mean',
-            color_continuous_scale='RdYlGn_r',
-            text='mean'
+        fig = go.Figure(data=[go.Pie(
+            labels=source_data['Source'],
+            values=source_data['Records'],
+            hole=0.4,
+            marker_colors=['#1f77b4', '#ff7f0e'],
+            textinfo='label+percent',
+            textposition='outside'
+        )])
+        
+        fig.update_layout(
+            title="Data Source Distribution",
+            height=400,
+            showlegend=True
         )
-        fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-        fig.update_layout(showlegend=False, height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
-        # Loan purpose distribution
-        intent_counts = filtered_df['loan_intent'].value_counts().reset_index()
-        intent_counts.columns = ['loan_intent', 'count']
+        # Default distribution
+        default_counts = filtered_df['loan_status'].value_counts()
+        default_labels = ['No Default', 'Default']
         
-        fig = px.pie(
-            intent_counts,
-            values='count',
-            names='loan_intent',
-            title="Loan Purpose Distribution",
-            hole=0.4
+        fig = go.Figure(data=[go.Pie(
+            labels=default_labels,
+            values=[default_counts.get(0, 0), default_counts.get(1, 0)],
+            hole=0.4,
+            marker_colors=['#28a745', '#dc3545'],
+            textinfo='label+percent+value',
+            textposition='outside'
+        )])
+        
+        fig.update_layout(
+            title="Loan Status Distribution (Filtered View)",
+            height=400
         )
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+    
+    st.markdown("---")
+    
+    # Key insights
+    st.subheader("🎯 Key Business Insights")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div class='info-box'>
+        <h4>🎯 Risk Segmentation Success</h4>
+        <ul>
+        <li><strong>49% of borrowers</strong> are in low-risk clusters (Clusters 0,3,5,6,8) with 3-8% default rates</li>
+        <li><strong>5% of borrowers</strong> are in extreme-risk cluster (Cluster 4) with 30% default rate</li>
+        <li>Clear risk tiers enable <strong>automated decision-making</strong> for half of applications</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class='info-box'>
+        <h4>💰 Predictive Model Performance</h4>
+        <ul>
+        <li><strong>XGBoost outperformed</strong> both Logistic Regression (74.20% ROC-AUC) and Random Forest (76.17%)</li>
+        <li><strong>Top features:</strong> Age (32.8%), Interest Rate (16.7%), Employment Length (14.4%)</li>
+        <li>Model catches <strong>67% of defaults</strong> while maintaining viable approval rates</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Technical summary
+    with st.expander("🔧 Technical Implementation Details"):
+        st.markdown("""
+        ### Data Preprocessing Pipeline
+        
+        **Data Cleaning:**
+        - Handled 3,116 missing interest rates (median imputation)
+        - Handled 895 missing employment lengths (median imputation)
+        - Removed 704 duplicate records
+        - Removed 384 outlier records using IQR method
+        
+        **Feature Engineering:**
+        - Created 7 new features: debt_to_income, risk_score, age_group, income_bracket, loan_size, rate_category, emp_category
+        - Applied SMOTE for class balancing (50-50 split) in training data
+        - Used StandardScaler for numerical features
+        
+        **Model Training:**
+        - Train-test split: 80-20 with stratification
+        - Cross-validation: 5-fold for all models
+        - Hyperparameter tuning: Grid search for optimal parameters
+        
+        **Clustering:**
+        - Algorithm: K-Means with k=10
+        - Optimization: Elbow method + Silhouette analysis
+        - Features: All 7 normalized features
+        
+        **Association Rules:**
+        - Algorithm: Apriori
+        - Min Support: 0.05 (5%)
+        - Min Confidence: 0.60 (60%)
+        - Generated: 3,132 rules from 874 frequent itemsets
+        """)
 
 # ============================================================================
 # PAGE 2: DATASET EXPLORER
@@ -339,29 +439,60 @@ if page == "🏠 Overview":
 
 elif page == "📊 Dataset Explorer":
     st.title("📊 Dataset Explorer")
-    st.markdown("### Interactive Data Analysis and Visualization")
+    st.markdown("### Interactive Analysis of Borrower Characteristics")
     st.markdown("---")
     
-    # Dataset statistics
-    st.subheader("📈 Dataset Statistics")
+    # Summary statistics
+    st.subheader("📈 Summary Statistics (Filtered Data)")
     
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Records", f"{len(filtered_df):,}")
+        st.metric(
+            "Average Age",
+            f"{filtered_df['person_age'].mean():.1f} years"
+        )
+        st.metric(
+            "Age Range",
+            f"{filtered_df['person_age'].min()}-{filtered_df['person_age'].max()}"
+        )
+    
     with col2:
-        st.metric("Defaults", f"{filtered_df['loan_status'].sum():,}")
+        st.metric(
+            "Average Income",
+            f"${filtered_df['person_income'].mean():,.0f}"
+        )
+        st.metric(
+            "Median Income",
+            f"${filtered_df['person_income'].median():,.0f}"
+        )
+    
     with col3:
-        st.metric("Avg Age", f"{filtered_df['person_age'].mean():.1f}")
+        st.metric(
+            "Average Loan",
+            f"${filtered_df['loan_amnt'].mean():,.0f}"
+        )
+        st.metric(
+            "Median Loan",
+            f"${filtered_df['loan_amnt'].median():,.0f}"
+        )
+    
     with col4:
-        st.metric("Avg DTI", f"{filtered_df['debt_to_income'].mean():.2f}")
-    with col5:
-        st.metric("Avg Rate", f"{filtered_df['loan_int_rate'].mean():.2f}%")
+        st.metric(
+            "Average Interest Rate",
+            f"{filtered_df['loan_int_rate'].mean():.2f}%"
+        )
+        st.metric(
+            "Default Rate",
+            f"{(filtered_df['loan_status'].sum() / len(filtered_df) * 100):.2f}%"
+        )
     
     st.markdown("---")
     
-    # Interactive visualizations
-    tab1, tab2, tab3 = st.tabs(["📊 Distributions", "🔗 Relationships", "📋 Data Table"])
+    # Distribution plots
+    st.subheader("📊 Feature Distributions")
+    
+    tab1, tab2, tab3 = st.tabs(["Demographics", "Financial", "Loan Details"])
     
     with tab1:
         col1, col2 = st.columns(2)
@@ -372,631 +503,1055 @@ elif page == "📊 Dataset Explorer":
                 filtered_df,
                 x='person_age',
                 color='loan_status',
-                title="Age Distribution by Loan Status",
-                labels={'loan_status': 'Default Status', 'person_age': 'Age'},
+                nbins=30,
+                title="Age Distribution by Default Status",
+                labels={'person_age': 'Age', 'loan_status': 'Status'},
+                color_discrete_map={0: '#28a745', 1: '#dc3545'},
                 barmode='overlay',
-                opacity=0.7,
-                color_discrete_map={0: 'green', 1: 'red'}
+                opacity=0.7
             )
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Income distribution
-            fig = px.histogram(
-                filtered_df,
-                x='person_income',
-                color='loan_status',
-                title="Income Distribution by Loan Status",
-                labels={'loan_status': 'Default Status', 'person_income': 'Income ($)'},
-                barmode='overlay',
-                opacity=0.7,
-                color_discrete_map={0: 'green', 1: 'red'}
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         
         with col2:
-            # Loan amount distribution
-            fig = px.histogram(
-                filtered_df,
-                x='loan_amnt',
-                color='loan_status',
-                title="Loan Amount Distribution by Status",
-                labels={'loan_status': 'Default Status', 'loan_amnt': 'Loan Amount ($)'},
-                barmode='overlay',
-                opacity=0.7,
-                color_discrete_map={0: 'green', 1: 'red'}
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            # Age group default rates
+            age_default = filtered_df.groupby('age_group')['loan_status'].agg(['mean', 'count']).reset_index()
+            age_default.columns = ['Age Group', 'Default Rate', 'Count']
+            age_default['Default Rate'] = age_default['Default Rate'] * 100
             
-            # Interest rate distribution
-            fig = px.histogram(
-                filtered_df,
-                x='loan_int_rate',
-                color='loan_status',
-                title="Interest Rate Distribution by Status",
-                labels={'loan_status': 'Default Status', 'loan_int_rate': 'Interest Rate (%)'},
-                barmode='overlay',
-                opacity=0.7,
-                color_discrete_map={0: 'green', 1: 'red'}
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=age_default['Age Group'],
+                y=age_default['Default Rate'],
+                name='Default Rate',
+                marker_color='#dc3545',
+                text=age_default['Default Rate'].round(2).astype(str) + '%',
+                textposition='outside'
+            ))
+            
+            fig.update_layout(
+                title="Default Rate by Age Group",
+                xaxis_title="Age Group",
+                yaxis_title="Default Rate (%)",
+                height=400
             )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     
     with tab2:
         col1, col2 = st.columns(2)
         
         with col1:
-            # Income vs Loan Amount
-            fig = px.scatter(
-                filtered_df.sample(min(5000, len(filtered_df))),
+            # Income distribution
+            fig = px.histogram(
+                filtered_df,
                 x='person_income',
-                y='loan_amnt',
                 color='loan_status',
-                title="Income vs Loan Amount",
-                labels={'person_income': 'Income ($)', 'loan_amnt': 'Loan Amount ($)', 
-                       'loan_status': 'Default'},
-                opacity=0.6,
-                color_discrete_map={0: 'green', 1: 'red'}
+                nbins=50,
+                title="Income Distribution by Default Status",
+                labels={'person_income': 'Income ($)', 'loan_status': 'Status'},
+                color_discrete_map={0: '#28a745', 1: '#dc3545'},
+                barmode='overlay',
+                opacity=0.7
             )
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Age vs Interest Rate
-            fig = px.scatter(
-                filtered_df.sample(min(5000, len(filtered_df))),
-                x='person_age',
-                y='loan_int_rate',
-                color='loan_status',
-                title="Age vs Interest Rate",
-                labels={'person_age': 'Age', 'loan_int_rate': 'Interest Rate (%)', 
-                       'loan_status': 'Default'},
-                opacity=0.6,
-                color_discrete_map={0: 'green', 1: 'red'}
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         
         with col2:
-            # DTI vs Default
-            fig = px.box(
-                filtered_df,
-                x='loan_status',
-                y='debt_to_income',
-                title="Debt-to-Income Ratio by Default Status",
-                labels={'loan_status': 'Default Status (0=No, 1=Yes)', 
-                       'debt_to_income': 'Debt-to-Income Ratio'},
-                color='loan_status',
-                color_discrete_map={0: 'green', 1: 'red'}
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            # Income bracket default rates
+            income_default = filtered_df.groupby('income_bracket')['loan_status'].agg(['mean', 'count']).reset_index()
+            income_default.columns = ['Income Bracket', 'Default Rate', 'Count']
+            income_default['Default Rate'] = income_default['Default Rate'] * 100
             
-            # Employment vs Default
-            fig = px.box(
-                filtered_df,
-                x='loan_status',
-                y='person_emp_length',
-                title="Employment Length by Default Status",
-                labels={'loan_status': 'Default Status (0=No, 1=Yes)', 
-                       'person_emp_length': 'Employment Length (years)'},
-                color='loan_status',
-                color_discrete_map={0: 'green', 1: 'red'}
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with tab3:
-        st.subheader("📋 Raw Data View")
-        
-        # Display options
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            # Get available columns, default to first 6
-            available_cols = filtered_df.columns.tolist()
-            default_cols = ['person_age', 'person_income', 'loan_amnt', 'loan_int_rate', 
-                           'loan_status', 'loan_intent']
-            # Only use default columns that actually exist
-            default_cols = [col for col in default_cols if col in available_cols]
-            # If we have fewer than 6, just use first 6 available
-            if len(default_cols) < 6:
-                default_cols = available_cols[:6]
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=income_default['Income Bracket'],
+                y=income_default['Default Rate'],
+                marker_color='#17a2b8',
+                text=income_default['Default Rate'].round(2).astype(str) + '%',
+                textposition='outside'
+            ))
             
-            show_columns = st.multiselect(
-                "Select columns to display",
-                options=available_cols,
-                default=default_cols
-            )
-        with col2:
-            n_rows = st.selectbox("Number of rows", [10, 25, 50, 100, 500], index=2)
-        with col3:
-            # Only allow sorting by columns that are displayed
-            if show_columns:
-                sort_options = show_columns
-            else:
-                sort_options = available_cols
-            sort_by = st.selectbox("Sort by", sort_options, index=0)
-        
-        # Display data only if columns are selected
-        if show_columns:
-            st.dataframe(
-                filtered_df[show_columns].sort_values(sort_by, ascending=False).head(n_rows),
-                use_container_width=True,
+            fig.update_layout(
+                title="Default Rate by Income Bracket",
+                xaxis_title="Income Bracket",
+                yaxis_title="Default Rate (%)",
                 height=400
             )
-        else:
-            st.warning("⚠️ Please select at least one column to display")
+            st.plotly_chart(fig, width='stretch')
+    
+    with tab3:
+        col1, col2 = st.columns(2)
         
-        # Download button
-        csv = filtered_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Filtered Data as CSV",
-            data=csv,
-            file_name='insightlens_filtered_data.csv',
-            mime='text/csv',
+        with col1:
+            # Loan amount distribution
+            fig = px.histogram(
+                filtered_df,
+                x='loan_amnt',
+                color='loan_status',
+                nbins=50,
+                title="Loan Amount Distribution by Default Status",
+                labels={'loan_amnt': 'Loan Amount ($)', 'loan_status': 'Status'},
+                color_discrete_map={0: '#28a745', 1: '#dc3545'},
+                barmode='overlay',
+                opacity=0.7
+            )
+            fig.update_layout(height=400)
+            st.plotly_chart(fig, width='stretch')
+        
+        with col2:
+            # Interest rate distribution
+            fig = px.histogram(
+                filtered_df,
+                x='loan_int_rate',
+                color='loan_status',
+                nbins=50,
+                title="Interest Rate Distribution by Default Status",
+                labels={'loan_int_rate': 'Interest Rate (%)', 'loan_status': 'Status'},
+                color_discrete_map={0: '#28a745', 1: '#dc3545'},
+                barmode='overlay',
+                opacity=0.7
+            )
+            fig.update_layout(height=400)
+            st.plotly_chart(fig, width='stretch')
+    
+    st.markdown("---")
+    
+    # Loan purpose analysis
+    st.subheader("🎯 Loan Purpose Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Loan purpose distribution
+        purpose_counts = filtered_df['loan_intent'].value_counts().reset_index()
+        purpose_counts.columns = ['Loan Purpose', 'Count']
+        
+        fig = px.bar(
+            purpose_counts,
+            x='Loan Purpose',
+            y='Count',
+            title="Loan Purpose Distribution",
+            color='Count',
+            color_continuous_scale='Blues'
         )
+        fig.update_layout(height=400, xaxis_tickangle=-45)
+        st.plotly_chart(fig, width='stretch')
+    
+    with col2:
+        # Default rate by purpose
+        purpose_default = filtered_df.groupby('loan_intent')['loan_status'].agg(['mean', 'count']).reset_index()
+        purpose_default.columns = ['Loan Purpose', 'Default Rate', 'Count']
+        purpose_default['Default Rate'] = purpose_default['Default Rate'] * 100
+        purpose_default = purpose_default.sort_values('Default Rate', ascending=False)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=purpose_default['Loan Purpose'],
+            y=purpose_default['Default Rate'],
+            marker_color='#ffc107',
+            text=purpose_default['Default Rate'].round(2).astype(str) + '%',
+            textposition='outside'
+        ))
+        
+        fig.update_layout(
+            title="Default Rate by Loan Purpose",
+            xaxis_title="Loan Purpose",
+            yaxis_title="Default Rate (%)",
+            height=400,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    st.markdown("---")
+    
+    # Correlation analysis
+    st.subheader("🔗 Feature Correlations")
+    
+    # Calculate correlation matrix
+    numeric_cols = ['person_age', 'person_income', 'loan_amnt', 'loan_int_rate', 
+                    'person_emp_length', 'debt_to_income', 'risk_score', 'loan_status']
+    corr_matrix = filtered_df[numeric_cols].corr()
+    
+    # Create heatmap
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=corr_matrix.values.round(2),
+        texttemplate='%{text}',
+        textfont={"size": 10},
+        colorbar=dict(title="Correlation")
+    ))
+    
+    fig.update_layout(
+        title="Feature Correlation Heatmap",
+        height=600,
+        xaxis_tickangle=-45
+    )
+    st.plotly_chart(fig, width='stretch')
 
 # ============================================================================
-# PAGE 3: MODEL PERFORMANCE
+# PAGE 3: MODEL PERFORMANCE - EXACT RESULTS
 # ============================================================================
 
 elif page == "🤖 Model Performance":
-    st.title("🤖 Model Performance Comparison")
-    st.markdown("### Classification Model Results and Analysis")
+    st.title("🤖 Classification Model Performance")
+    st.markdown("### Predicting Loan Default Risk")
     st.markdown("---")
     
-    # Model comparison metrics
+    # Model comparison - EXACT numbers from analysis
     st.subheader("📊 Model Comparison")
     
-    models_data = {
-        'Model': ['Logistic Regression', 'Random Forest', 'XGBoost'],
+    model_results = pd.DataFrame({
+        'Model': ['Logistic Regression', 'Random Forest', 'XGBoost (Best)'],
         'Accuracy': [0.6593, 0.7305, 0.7200],
         'Precision': [0.2290, 0.2689, 0.2638],
         'Recall': [0.7066, 0.6482, 0.6682],
         'F1-Score': [0.3459, 0.3801, 0.3783],
         'ROC-AUC': [0.7420, 0.7617, 0.7651],
-        'CV ROC-AUC': [0.7464, 0.8057, 0.7646]
-    }
+        'Cross-Val ROC-AUC': [0.7464, 0.7644, 0.7646]
+    })
     
-    models_df = pd.DataFrame(models_data)
-    
-    # Highlight best scores
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("🏆 Best Model", "XGBoost", delta="ROC-AUC: 0.7651")
-    with col2:
-        st.metric("🎯 Best Feature", "Person Age", delta="30.2-32.8% importance")
-    with col3:
-        st.metric("✅ Model Reliability", "High", delta="CV Score: 0.7646")
+    # Highlight best model
+    st.markdown("""
+    <div class='success-box'>
+    <h4>🏆 Best Model: XGBoost</h4>
+    <p><strong>ROC-AUC: 76.51%</strong> | Accuracy: 72.00% | Recall: 66.82%</p>
+    <p>XGBoost achieved the highest ROC-AUC score and balanced performance across all metrics.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Interactive model comparison
-    metric_choice = st.selectbox(
-        "Select metric to compare:",
-        ['ROC-AUC', 'Accuracy', 'Precision', 'Recall', 'F1-Score', 'CV ROC-AUC']
+    # Display model comparison table
+    st.dataframe(
+        model_results.style.format({
+            'Accuracy': '{:.2%}',
+            'Precision': '{:.2%}',
+            'Recall': '{:.2%}',
+            'F1-Score': '{:.4f}',
+            'ROC-AUC': '{:.2%}',
+            'Cross-Val ROC-AUC': '{:.2%}'
+        }).background_gradient(subset=['ROC-AUC'], cmap='RdYlGn', vmin=0.7, vmax=0.8),
+        width='stretch'
     )
-    
-    fig = px.bar(
-        models_df,
-        x='Model',
-        y=metric_choice,
-        title=f"Model Comparison - {metric_choice}",
-        color=metric_choice,
-        color_continuous_scale='Viridis',
-        text=metric_choice
-    )
-    fig.update_traces(texttemplate='%{text:.4f}', textposition='outside')
-    fig.update_layout(showlegend=False, height=400)
-    st.plotly_chart(fig, use_container_width=True)
     
     st.markdown("---")
     
-    # Feature importance
+    # Visualize model performance
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("🎯 Random Forest Feature Importance")
+        # ROC-AUC comparison
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=model_results['Model'],
+            y=model_results['ROC-AUC'] * 100,
+            marker_color=['#17a2b8', '#ffc107', '#28a745'],
+            text=[f"{val:.2f}%" for val in model_results['ROC-AUC'] * 100],
+            textposition='outside'
+        ))
         
-        rf_features = {
-            'Feature': ['person_age', 'loan_int_rate', 'person_emp_length', 'risk_score',
-                       'person_income', 'debt_to_income', 'loan_amnt'],
-            'Importance': [0.3279, 0.1669, 0.1437, 0.1337, 0.0972, 0.0886, 0.0421]
-        }
-        rf_df = pd.DataFrame(rf_features)
-        
-        fig = px.bar(
-            rf_df,
-            y='Feature',
-            x='Importance',
-            orientation='h',
-            title="Top 7 Features - Random Forest",
-            color='Importance',
-            color_continuous_scale='Blues',
-            text='Importance'
+        fig.update_layout(
+            title="ROC-AUC Score Comparison",
+            xaxis_title="Model",
+            yaxis_title="ROC-AUC (%)",
+            height=400,
+            yaxis_range=[70, 80]
         )
-        fig.update_traces(texttemplate='%{text:.1%}', textposition='outside')
-        fig.update_layout(showlegend=False, height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
-        st.subheader("🎯 XGBoost Feature Importance")
+        # Metric comparison radar chart
+        fig = go.Figure()
         
-        xgb_features = {
-            'Feature': ['person_age', 'risk_score', 'loan_int_rate', 'person_income',
-                       'person_emp_length', 'debt_to_income', 'loan_amnt'],
-            'Importance': [0.3025, 0.1884, 0.1540, 0.1222, 0.1088, 0.0718, 0.0523]
-        }
-        xgb_df = pd.DataFrame(xgb_features)
+        metrics = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']
         
-        fig = px.bar(
-            xgb_df,
-            y='Feature',
-            x='Importance',
-            orientation='h',
-            title="Top 7 Features - XGBoost",
-            color='Importance',
-            color_continuous_scale='Oranges',
-            text='Importance'
+        for idx, model in enumerate(model_results['Model']):
+            values = [
+                model_results.loc[idx, 'Accuracy'],
+                model_results.loc[idx, 'Precision'],
+                model_results.loc[idx, 'Recall'],
+                model_results.loc[idx, 'F1-Score'],
+                model_results.loc[idx, 'ROC-AUC']
+            ]
+            
+            fig.add_trace(go.Scatterpolar(
+                r=values,
+                theta=metrics,
+                fill='toself',
+                name=model
+            ))
+        
+        fig.update_layout(
+            title="Multi-Metric Comparison",
+            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+            height=400
         )
-        fig.update_traces(texttemplate='%{text:.1%}', textposition='outside')
-        fig.update_layout(showlegend=False, height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     st.markdown("---")
     
-    # Key insights
-    st.subheader("💡 Key Insights")
+    # XGBoost detailed results
+    st.subheader("🏆 XGBoost Model - Detailed Results")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("""
-        **🏆 Why XGBoost Wins:**
-        - Highest ROC-AUC (0.7651)
-        - Best recall-precision balance
-        - Handles class imbalance well
-        - Consistent CV performance
-        """)
+        <div class='info-box'>
+        <h4>📊 Performance Metrics</h4>
+        <ul>
+        <li><strong>ROC-AUC:</strong> 76.51%</li>
+        <li><strong>Accuracy:</strong> 72.00%</li>
+        <li><strong>Precision:</strong> 26.38%</li>
+        <li><strong>Recall:</strong> 66.82%</li>
+        <li><strong>F1-Score:</strong> 0.3783</li>
+        <li><strong>Cross-Val:</strong> 76.46%</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
-        **🎯 Top Predictors:**
-        - **Age**: 30%+ importance
-        - **Risk Score**: 13-19%
-        - **Interest Rate**: 15-17%
-        - **Income**: 10-12%
-        """)
+        <div class='info-box'>
+        <h4>🎯 Confusion Matrix</h4>
+        <ul>
+        <li><strong>True Negatives:</strong> 36,556</li>
+        <li><strong>False Positives:</strong> 13,498</li>
+        <li><strong>False Negatives:</strong> 2,426</li>
+        <li><strong>True Positives:</strong> 4,888</li>
+        </ul>
+        <p><strong>Interpretation:</strong> Model correctly identifies 67% of defaults</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
-        **✅ Model Validation:**
-        - Cross-validated on 5 folds
-        - Trained on 229,472 records
-        - Tested on 57,368 records
-        - SMOTE for balance
+        <div class='info-box'>
+        <h4>💡 Business Impact</h4>
+        <ul>
+        <li><strong>Default Detection:</strong> 66.82%</li>
+        <li><strong>False Alarm Rate:</strong> 26.98%</li>
+        <li><strong>Miss Rate:</strong> 33.18%</li>
+        </ul>
+        <p><strong>Trade-off:</strong> Catches 2 out of 3 defaults with acceptable false positives</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Feature importance - EXACT from analysis
+    st.subheader("🔍 Feature Importance Analysis")
+    
+    feature_importance = pd.DataFrame({
+        'Feature': ['person_age', 'loan_int_rate', 'person_emp_length', 'risk_score', 
+                   'person_income', 'loan_amnt', 'debt_to_income'],
+        'Importance': [0.327865, 0.166870, 0.143706, 0.133709, 0.097223, 0.088881, 0.041746],
+        'Interpretation': [
+            'Older borrowers = Lower default risk',
+            'Higher rates = Higher default risk',
+            'Longer employment = Lower risk',
+            'Combined risk metric',
+            'Higher income = Lower risk',
+            'Loan amount impact',
+            'DTI ratio indicator'
+        ]
+    })
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            y=feature_importance['Feature'],
+            x=feature_importance['Importance'] * 100,
+            orientation='h',
+            marker_color='#1f77b4',
+            text=[f"{val:.2f}%" for val in feature_importance['Importance'] * 100],
+            textposition='outside'
+        ))
+        
+        fig.update_layout(
+            title="Feature Importance Rankings (XGBoost)",
+            xaxis_title="Importance (%)",
+            yaxis_title="Feature",
+            height=400
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    with col2:
+        st.markdown("### Key Insights")
+        st.markdown("""
+        **Top 3 Features (64% of importance):**
+        
+        1. **Age (32.8%)** - Most predictive feature
+        2. **Interest Rate (16.7%)** - Risk proxy
+        3. **Employment Length (14.4%)** - Stability indicator
+        
+        **Implications:**
+        - Demographic factors dominate
+        - Rate reflects underlying risk
+        - Experience matters significantly
+        """)
+    
+    st.markdown("---")
+    
+    # Model comparison details
+    with st.expander("📈 Detailed Model Comparisons"):
+        st.markdown("### Logistic Regression")
+        st.markdown("""
+        **Performance:**
+        - ROC-AUC: 74.20% | Cross-Val: 74.64%
+        - Accuracy: 65.93% | Recall: 70.66%
+        
+        **Confusion Matrix:**
+        - TN: 32,653 | FP: 17,401
+        - FN: 2,146 | TP: 5,168
+        
+        **Strengths:** High interpretability, fastest training
+        **Weaknesses:** Linear assumptions limit performance
+        """)
+        
+        st.markdown("---")
+        
+        st.markdown("### Random Forest")
+        st.markdown("""
+        **Performance:**
+        - ROC-AUC: 76.17% | Cross-Val: 76.44%
+        - Accuracy: 73.05% | Recall: 64.82%
+        
+        **Confusion Matrix:**
+        - TN: 37,164 | FP: 12,890
+        - FN: 2,573 | TP: 4,741
+        
+        **Strengths:** Handles non-linear patterns, robust
+        **Weaknesses:** Slightly lower recall than XGBoost
+        """)
+        
+        st.markdown("---")
+        
+        st.markdown("### XGBoost (Selected)")
+        st.markdown("""
+        **Performance:**
+        - ROC-AUC: 76.51% | Cross-Val: 76.46%
+        - Accuracy: 72.00% | Recall: 66.82%
+        
+        **Confusion Matrix:**
+        - TN: 36,556 | FP: 13,498
+        - FN: 2,426 | TP: 4,888
+        
+        **Why Selected:**
+        - **Highest ROC-AUC** (76.51%)
+        - **Best generalization** (minimal CV gap)
+        - **Industry standard** for credit risk
+        - **Balanced performance** across metrics
         """)
 
 # ============================================================================
-# PAGE 4: BORROWER SEGMENTS
+# PAGE 4: BORROWER SEGMENTS - EXACT CLUSTER RESULTS
 # ============================================================================
 
 elif page == "👥 Borrower Segments":
     st.title("👥 Borrower Segmentation Analysis")
-    st.markdown("### 10 Distinct Clusters with Default Rates from 3.45% to 30.34%")
+    st.markdown("### K-Means Clustering Results (k=10)")
     st.markdown("---")
     
-    # Cluster data (from your analysis)
-    cluster_data = {
-        'Cluster': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        'Size': [30635, 26982, 43686, 27577, 14606, 30086, 25572, 29704, 27765, 30227],
-        'Default_Rate': [3.45, 23.82, 19.62, 7.56, 30.34, 7.84, 6.28, 10.25, 7.18, 16.52],
-        'Avg_Age': [56.5, 33.0, 28.6, 55.9, 43.6, 55.1, 34.3, 32.0, 53.2, 32.0],
-        'Avg_Income': [113869, 52096, 59362, 60946, 23445, 111873, 69441, 112958, 51196, 119174],
-        'Risk_Level': ['Low', 'High', 'High', 'Low', 'Very High', 'Low', 'Low', 'Moderate', 'Low', 'Moderate']
-    }
-    cluster_df = pd.DataFrame(cluster_data)
+    # Clustering overview
+    st.markdown("""
+    <div class='success-box'>
+    <h4>🎯 Clustering Summary</h4>
+    <p><strong>10 distinct borrower segments</strong> identified using K-Means clustering</p>
+    <p><strong>Silhouette Score:</strong> 0.1971</p>
+    <p><strong>Default Rate Range:</strong> 3.45% (Cluster 0) to 30.34% (Cluster 4)</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Summary metrics
+    st.markdown("---")
+    
+    # EXACT cluster data from analysis
+    cluster_data = pd.DataFrame({
+        'Cluster': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        'Size': [30642, 26888, 31693, 28341, 14521, 27657, 27718, 29931, 39222, 30227],
+        'Percentage': [10.68, 9.38, 11.05, 9.88, 5.06, 9.64, 9.66, 10.43, 13.67, 10.54],
+        'Default_Rate': [3.45, 23.82, 17.89, 6.35, 30.34, 8.04, 7.53, 10.25, 6.52, 16.52],
+        'Avg_Age': [49, 29, 35, 47, 35, 44, 46, 41, 45, 32],
+        'Avg_Income': [114881, 72726, 96068, 88544, 57482, 82024, 91269, 77173, 88191, 119174],
+        'Avg_Loan': [187595, 57950, 98451, 150978, 75023, 117782, 136542, 112427, 139960, 85014],
+        'Avg_Rate': [9.43, 20.46, 17.63, 10.62, 18.97, 11.56, 10.78, 12.93, 11.02, 19.22],
+        'Risk_Level': ['Very Low', 'Very High', 'High', 'Low', 'Extreme', 'Low', 'Low', 'Moderate', 'Low', 'High'],
+        'Recommendation': ['Fast-track', 'Enhanced review', 'Enhanced review', 'Standard', 
+                          'Reject', 'Standard', 'Standard', 'Standard', 'Fast-track', 'Enhanced review']
+    })
+    
+    # Risk distribution visualization
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Cluster size distribution
+        fig = go.Figure(data=[go.Pie(
+            labels=[f"Cluster {i}" for i in cluster_data['Cluster']],
+            values=cluster_data['Size'],
+            textinfo='label+percent',
+            textposition='outside',
+            marker=dict(colors=px.colors.qualitative.Set3)
+        )])
+        
+        fig.update_layout(
+            title="Cluster Size Distribution",
+            height=500
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    with col2:
+        # Default rate by cluster
+        colors = ['#28a745', '#dc3545', '#ffc107', '#28a745', '#8b0000', 
+                 '#28a745', '#28a745', '#ffc107', '#28a745', '#dc3545']
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=[f"C{i}" for i in cluster_data['Cluster']],
+            y=cluster_data['Default_Rate'],
+            marker_color=colors,
+            text=[f"{val:.2f}%" for val in cluster_data['Default_Rate']],
+            textposition='outside'
+        ))
+        
+        fig.update_layout(
+            title="Default Rate by Cluster",
+            xaxis_title="Cluster",
+            yaxis_title="Default Rate (%)",
+            height=500
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    st.markdown("---")
+    
+    # Cluster summary table
+    st.subheader("📊 Cluster Summary Table")
+    
+    display_df = cluster_data.copy()
+    display_df['Size'] = display_df['Size'].apply(lambda x: f"{x:,}")
+    display_df['Percentage'] = display_df['Percentage'].apply(lambda x: f"{x:.2f}%")
+    display_df['Default_Rate'] = display_df['Default_Rate'].apply(lambda x: f"{x:.2f}%")
+    display_df['Avg_Income'] = display_df['Avg_Income'].apply(lambda x: f"${x:,}")
+    display_df['Avg_Loan'] = display_df['Avg_Loan'].apply(lambda x: f"${x:,}")
+    display_df['Avg_Rate'] = display_df['Avg_Rate'].apply(lambda x: f"{x:.2f}%")
+    
+    st.dataframe(display_df, width='stretch', hide_index=True)
+    
+    st.markdown("---")
+    
+    # Risk tier grouping
+    st.subheader("🎯 Risk-Based Segmentation")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Total Clusters", "10")
+        st.markdown("""
+        <div style='background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;'>
+        <h4 style='color: #155724;'>✅ Very Low Risk</h4>
+        <p><strong>Cluster 0</strong></p>
+        <p>Default Rate: <strong>3.45%</strong></p>
+        <p>Size: <strong>30,642 (10.7%)</strong></p>
+        <p><strong>Action:</strong> Auto-approve</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col2:
-        st.metric("Lowest Default Rate", "3.45%", delta="Cluster 0")
+        st.markdown("""
+        <div style='background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;'>
+        <h4 style='color: #155724;'>✅ Low Risk</h4>
+        <p><strong>Clusters 3,5,6,8</strong></p>
+        <p>Default Rate: <strong>6-8%</strong></p>
+        <p>Size: <strong>110,937 (38.6%)</strong></p>
+        <p><strong>Action:</strong> Fast-track</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col3:
-        st.metric("Highest Default Rate", "30.34%", delta="Cluster 4", delta_color="inverse")
+        st.markdown("""
+        <div style='background-color: #fff3cd; padding: 15px; border-radius: 5px; border-left: 5px solid #ffc107;'>
+        <h4 style='color: #856404;'>⚠️ Moderate Risk</h4>
+        <p><strong>Cluster 7</strong></p>
+        <p>Default Rate: <strong>10.25%</strong></p>
+        <p>Size: <strong>29,931 (10.4%)</strong></p>
+        <p><strong>Action:</strong> Standard review</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col4:
-        st.metric("Risk Variation", "8.8x", delta="Cluster 0 vs 4")
+        st.markdown("""
+        <div style='background-color: #f8d7da; padding: 15px; border-radius: 5px; border-left: 5px solid #dc3545;'>
+        <h4 style='color: #721c24;'>❌ High/Extreme Risk</h4>
+        <p><strong>Clusters 1,2,4,9</strong></p>
+        <p>Default Rate: <strong>17-30%</strong></p>
+        <p>Size: <strong>103,329 (36.0%)</strong></p>
+        <p><strong>Action:</strong> Enhanced/Reject</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Interactive cluster visualization
-    col1, col2 = st.columns([2, 1])
+    # Detailed cluster profiles
+    st.subheader("📋 Detailed Cluster Profiles")
     
-    with col1:
-        # Default rate by cluster
-        cluster_df['Color'] = cluster_df['Default_Rate'].apply(
-            lambda x: 'Low (<10%)' if x < 10 else ('Moderate (10-15%)' if x < 15 else 'High (>15%)')
-        )
-        
-        fig = px.bar(
-            cluster_df,
-            x='Cluster',
-            y='Default_Rate',
-            title="Default Rate by Cluster",
-            color='Color',
-            color_discrete_map={
-                'Low (<10%)': 'green',
-                'Moderate (10-15%)': 'orange',
-                'High (>15%)': 'red'
-            },
-            text='Default_Rate'
-        )
-        fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
-        fig.update_layout(height=400, xaxis_title="Cluster", yaxis_title="Default Rate (%)")
-        st.plotly_chart(fig, use_container_width=True)
+    selected_cluster = st.selectbox("Select a cluster to view detailed profile:", 
+                                    options=range(10),
+                                    format_func=lambda x: f"Cluster {x} - {cluster_data[cluster_data['Cluster']==x]['Risk_Level'].values[0]} Risk ({cluster_data[cluster_data['Cluster']==x]['Default_Rate'].values[0]:.2f}% default)")
     
-    with col2:
-        st.subheader("Risk Distribution")
-        risk_counts = cluster_df['Risk_Level'].value_counts().reset_index()
-        risk_counts.columns = ['Risk_Level', 'Count']
-        
-        fig = px.pie(
-            risk_counts,
-            values='Count',
-            names='Risk_Level',
-            title="Clusters by Risk Level",
-            color='Risk_Level',
-            color_discrete_map={
-                'Low': 'green',
-                'Moderate': 'orange',
-                'High': 'red',
-                'Very High': 'darkred'
-            }
-        )
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    st.markdown("---")
-    
-    # Cluster details
-    st.subheader("📋 Cluster Profiles")
-    
-    selected_cluster = st.selectbox("Select a cluster to view details:", range(10))
-    
-    cluster_info = cluster_df[cluster_df['Cluster'] == selected_cluster].iloc[0]
+    cluster_info = cluster_data[cluster_data['Cluster'] == selected_cluster].iloc[0]
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown(f"""
-        ### Cluster {selected_cluster}
-        **Size:** {cluster_info['Size']:,} borrowers ({cluster_info['Size']/cluster_df['Size'].sum()*100:.1f}%)
-        
-        **Default Rate:** {cluster_info['Default_Rate']:.2f}%
-        
-        **Risk Level:** {cluster_info['Risk_Level']}
-        """)
+        <div class='info-box'>
+        <h4>📊 Cluster {selected_cluster} Overview</h4>
+        <ul>
+        <li><strong>Size:</strong> {cluster_info['Size']:,} borrowers ({cluster_info['Percentage']:.2f}%)</li>
+        <li><strong>Default Rate:</strong> {cluster_info['Default_Rate']:.2f}%</li>
+        <li><strong>Risk Level:</strong> {cluster_info['Risk_Level']}</li>
+        <li><strong>Recommendation:</strong> {cluster_info['Recommendation']}</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown(f"""
-        ### Financial Profile
-        **Average Age:** {cluster_info['Avg_Age']:.1f} years
-        
-        **Average Income:** ${cluster_info['Avg_Income']:,.0f}
-        
-        **Market Share:** {cluster_info['Size']/cluster_df['Size'].sum()*100:.1f}%
-        """)
+        <div class='info-box'>
+        <h4>💰 Financial Profile</h4>
+        <ul>
+        <li><strong>Average Age:</strong> {cluster_info['Avg_Age']} years</li>
+        <li><strong>Average Income:</strong> ${cluster_info['Avg_Income']:,}</li>
+        <li><strong>Average Loan:</strong> ${cluster_info['Avg_Loan']:,}</li>
+        <li><strong>Average Rate:</strong> {cluster_info['Avg_Rate']:.2f}%</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        # Recommendation based on risk level
-        if cluster_info['Risk_Level'] == 'Low':
-            recommendation = "✅ **Approve** with standard rates and streamlined process"
-            color = "green"
+        # Calculate DTI for this cluster
+        dti = cluster_info['Avg_Loan'] / cluster_info['Avg_Income']
+        
+        if cluster_info['Risk_Level'] == 'Very Low':
+            recommendation = "✅ Excellent candidates for premium rates and auto-approval"
+        elif cluster_info['Risk_Level'] == 'Low':
+            recommendation = "✅ Good candidates for standard rates and fast-track processing"
         elif cluster_info['Risk_Level'] == 'Moderate':
-            recommendation = "⚠️ **Approve** with enhanced monitoring and adjusted rates"
-            color = "orange"
+            recommendation = "⚠️ Require standard underwriting with moderate rate adjustment"
         elif cluster_info['Risk_Level'] == 'High':
-            recommendation = "🔍 **Review** carefully, require additional collateral"
-            color = "red"
-        else:  # Very High
-            recommendation = "❌ **Reject** or significantly restrict lending"
-            color = "darkred"
+            recommendation = "⚠️ Require enhanced due diligence and higher rates or collateral"
+        else:  # Extreme
+            recommendation = "❌ High rejection rate recommended - not viable even with premium pricing"
         
         st.markdown(f"""
-        ### Business Action
-        {recommendation}
-        
-        **Expected Defaults:** {int(cluster_info['Size'] * cluster_info['Default_Rate'] / 100):,} borrowers
-        
-        **Success Rate:** {100 - cluster_info['Default_Rate']:.1f}%
-        """)
+        <div class='info-box'>
+        <h4>🎯 Business Strategy</h4>
+        <ul>
+        <li><strong>Debt-to-Income:</strong> {dti:.2f}x</li>
+        <li><strong>Market Share:</strong> {cluster_info['Percentage']:.1f}% of borrowers</li>
+        </ul>
+        <p><strong>Recommendation:</strong><br>{recommendation}</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Cluster comparison
-    st.subheader("📊 Cluster Comparison")
+    # Cluster characteristics visualization
+    st.subheader("📈 Cluster Characteristics Comparison")
     
-    comparison_metric = st.selectbox(
-        "Compare clusters by:",
-        ['Default_Rate', 'Size', 'Avg_Age', 'Avg_Income']
-    )
+    tab1, tab2, tab3 = st.tabs(["Financial Metrics", "Risk Indicators", "Demographics"])
     
-    fig = px.scatter(
-        cluster_df,
-        x='Avg_Age',
-        y='Avg_Income',
-        size='Size',
-        color='Default_Rate',
-        hover_data=['Cluster', 'Risk_Level'],
-        title="Cluster Comparison: Age vs Income (sized by cluster size)",
-        labels={'Avg_Age': 'Average Age', 'Avg_Income': 'Average Income ($)'},
-        color_continuous_scale='RdYlGn_r',
-        size_max=50
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
+    with tab1:
+        # Income vs Loan Amount scatter
+        fig = go.Figure()
+        
+        for i in range(10):
+            cluster_info = cluster_data[cluster_data['Cluster'] == i].iloc[0]
+            fig.add_trace(go.Scatter(
+                x=[cluster_info['Avg_Income']],
+                y=[cluster_info['Avg_Loan']],
+                mode='markers+text',
+                marker=dict(
+                    size=cluster_info['Percentage'] * 5,
+                    color=cluster_info['Default_Rate'],
+                    colorscale='RdYlGn_r',
+                    showscale=True,
+                    colorbar=dict(title="Default Rate (%)")
+                ),
+                text=f"C{i}",
+                textposition="middle center",
+                name=f"Cluster {i}"
+            ))
+        
+        fig.update_layout(
+            title="Income vs Loan Amount by Cluster (bubble size = market share)",
+            xaxis_title="Average Income ($)",
+            yaxis_title="Average Loan Amount ($)",
+            height=500,
+            showlegend=False
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    with tab2:
+        # Interest rate vs Default rate
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=cluster_data['Avg_Rate'],
+            y=cluster_data['Default_Rate'],
+            mode='markers+text',
+            marker=dict(size=15, color=cluster_data['Default_Rate'], colorscale='RdYlGn_r'),
+            text=[f"C{i}" for i in cluster_data['Cluster']],
+            textposition="top center"
+        ))
+        
+        fig.update_layout(
+            title="Interest Rate vs Default Rate Relationship",
+            xaxis_title="Average Interest Rate (%)",
+            yaxis_title="Default Rate (%)",
+            height=500
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    with tab3:
+        # Age distribution by cluster
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=[f"C{i}" for i in cluster_data['Cluster']],
+            y=cluster_data['Avg_Age'],
+            marker_color=cluster_data['Default_Rate'],
+            marker=dict(colorscale='RdYlGn_r', showscale=True, colorbar=dict(title="Default Rate (%)")),
+            text=cluster_data['Avg_Age'],
+            textposition='outside'
+        ))
+        
+        fig.update_layout(
+            title="Average Age by Cluster",
+            xaxis_title="Cluster",
+            yaxis_title="Average Age (years)",
+            height=500
+        )
+        st.plotly_chart(fig, width='stretch')
 
 # ============================================================================
-# PAGE 5: PATTERN DISCOVERY
+# PAGE 5: PATTERN DISCOVERY - EXACT ASSOCIATION RULES
 # ============================================================================
 
 elif page == "🔗 Pattern Discovery":
     st.title("🔗 Association Rule Mining Results")
-    st.markdown("### 3,132 Rules Discovered with 60%+ Confidence")
+    st.markdown("### Apriori Algorithm - Pattern Discovery")
     st.markdown("---")
     
-    # Summary metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Rules", "3,132")
-    with col2:
-        st.metric("Max Confidence", "96.9%")
-    with col3:
-        st.metric("Max Lift", "1.23")
-    with col4:
-        st.metric("Success Rules", "10 High-Confidence")
+    # Mining summary
+    st.markdown("""
+    <div class='success-box'>
+    <h4>🔍 Mining Summary</h4>
+    <p><strong>Frequent Itemsets:</strong> 874</p>
+    <p><strong>Association Rules:</strong> 3,132</p>
+    <p><strong>Min Support:</strong> 0.05 (5%)</p>
+    <p><strong>Min Confidence:</strong> 0.60 (60%)</p>
+    <p><strong>Highest Lift:</strong> 1.2316</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Top rules
-    st.subheader("🏆 Top 10 Association Rules")
+    # Key finding
+    st.markdown("""
+    <div class='info-box'>
+    <h4>💡 Key Finding</h4>
+    <p>While <strong>NO rules were found specifically predicting defaults</strong>, we discovered 
+    <strong>1,250 high-confidence rules (82-97% confidence) predicting successful repayment</strong>. 
+    This insight is valuable for identifying low-risk borrowers who can be fast-tracked through 
+    the approval process.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    rules_data = {
-        'Rank': list(range(1, 11)),
-        'Pattern': [
-            'Low Rate + Senior Age + Senior Employment → No Default',
-            'Large Loan + Low Rate + Senior Age + Senior Emp → No Default',
-            'Large Loan + Low Rate + Senior Age → No Default',
-            'Low Rate + Senior Age → No Default',
-            'Low Rate + Senior Age → Large Loan + No Default',
-            'Senior Age + Low Rate + Senior Emp → Large Loan + No Default',
-            'Low Rate + Senior Emp + Senior Age → Large Loan + No Default',
-            'Low Rate + Senior Age + Loan Default Data → No Default',
-            'Large Loan + Low Rate + Senior Age → Senior Emp + No Default',
-            'Low Rate + Senior Age → No Default + Senior Emp'
+    st.markdown("---")
+    
+    # Top 15 rules - EXACT from analysis
+    st.subheader("🏆 Top 15 Association Rules (Ranked by Lift)")
+    
+    top_rules = pd.DataFrame({
+        'Rank': range(1, 16),
+        'Antecedent': [
+            'LowRate + Senior + SeniorEmployee',
+            'LowRate + Senior + SeniorEmployee',
+            'VeryLargeLoan + LowRate + Senior + SeniorEmployee',
+            'VeryLargeLoan + LowRate + Senior',
+            'LowRate + Senior',
+            'LowRate + Senior',
+            'Senior + LowRate + LoanDefault + SeniorEmployee',
+            'LowRate + Senior + SeniorEmployee',
+            'LowRate + LoanDefault + Senior',
+            'VeryLargeLoan + LowRate + Senior',
+            'LowRate + LoanDefault + Senior',
+            'LowRate + Senior',
+            'LowRate + Senior',
+            'LowRate + Senior',
+            'LowRate + Senior'
         ],
-        'Support': [0.075, 0.070, 0.077, 0.082, 0.077, 0.070, 0.070, 0.082, 0.070, 0.075],
-        'Confidence': [0.969, 0.907, 0.968, 0.966, 0.903, 0.907, 0.907, 0.905, 0.879, 0.879],
-        'Lift': [1.232, 1.231, 1.231, 1.228, 1.227, 1.225, 1.224, 1.222, 1.223, 1.222]
-    }
-    rules_df = pd.DataFrame(rules_data)
+        'Consequent': [
+            'NoDefault + LoanDefault',
+            'NoDefault + VeryLargeLoan + LoanDefault',
+            'NoDefault + LoanDefault',
+            'NoDefault + LoanDefault',
+            'NoDefault + LoanDefault',
+            'NoDefault + VeryLargeLoan + LoanDefault',
+            'NoDefault + VeryLargeLoan',
+            'NoDefault + VeryLargeLoan',
+            'NoDefault + VeryLargeLoan + SeniorEmployee',
+            'NoDefault + SeniorEmployee + LoanDefault',
+            'NoDefault + VeryLargeLoan',
+            'NoDefault + SeniorEmployee + LoanDefault',
+            'NoDefault + VeryLargeLoan + SeniorEmployee + LoanDefault',
+            'NoDefault + VeryLargeLoan + SeniorEmployee',
+            'NoDefault + VeryLargeLoan'
+        ],
+        'Support': [0.0750, 0.0702, 0.0702, 0.0771, 0.0824, 0.0771, 0.0702, 0.0702, 
+                   0.0702, 0.0702, 0.0771, 0.0750, 0.0702, 0.0702, 0.0771],
+        'Confidence': [0.9690, 0.9066, 0.9684, 0.9661, 0.9652, 0.9032, 0.9073, 0.9066,
+                      0.8239, 0.8791, 0.9054, 0.8785, 0.8220, 0.8220, 0.9033],
+        'Lift': [1.2316, 1.2311, 1.2308, 1.2278, 1.2267, 1.2265, 1.2248, 1.2238,
+                1.2230, 1.2229, 1.2222, 1.2220, 1.2214, 1.2201, 1.2194]
+    })
     
-    # Display rules table
     st.dataframe(
-        rules_df.style.background_gradient(subset=['Confidence', 'Lift'], cmap='RdYlGn'),
-        use_container_width=True,
-        height=400
+        top_rules.style.format({
+            'Support': '{:.2%}',
+            'Confidence': '{:.2%}',
+            'Lift': '{:.4f}'
+        }).background_gradient(subset=['Confidence'], cmap='RdYlGn', vmin=0.8, vmax=1.0),
+        width='stretch',
+        hide_index=True
     )
     
     st.markdown("---")
     
-    # Rule metrics visualization
-    col1, col2 = st.columns(2)
+    # Top 5 rules for prediction
+    st.subheader("🎯 Top 5 Rules for No-Default Prediction")
+    
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        fig = px.bar(
-            rules_df.head(10),
-            x='Rank',
-            y='Confidence',
-            title="Top 10 Rules by Confidence",
-            color='Confidence',
-            color_continuous_scale='Viridis',
-            text='Confidence'
-        )
-        fig.update_traces(texttemplate='%{text:.1%}', textposition='outside')
-        fig.update_layout(showlegend=False, height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("""
+        <div class='success-box'>
+        <h4>Rule 1: Senior + Low Rate + Senior Employment</h4>
+        <p><strong>IF:</strong> Interest Rate is Low AND Age is Senior (50+) AND Employment is Senior Employee</p>
+        <p><strong>THEN:</strong> No Default (Success)</p>
+        <p><strong>Confidence: 96.90%</strong> | Support: 7.50% | Lift: 1.2316</p>
+        </div>
+        
+        <div class='success-box'>
+        <h4>Rule 2: Very Large Loan + Senior + Low Rate</h4>
+        <p><strong>IF:</strong> Loan is Very Large AND Interest Rate is Low AND Age is Senior</p>
+        <p><strong>THEN:</strong> No Default (Success)</p>
+        <p><strong>Confidence: 96.84%</strong> | Support: 7.02% | Lift: 1.2308</p>
+        </div>
+        
+        <div class='success-box'>
+        <h4>Rule 3: Very Large Loan + Senior + Low Rate</h4>
+        <p><strong>IF:</strong> Loan Amount is Very Large AND Interest Rate is Low AND Age is Senior</p>
+        <p><strong>THEN:</strong> No Default (Success)</p>
+        <p><strong>Confidence: 96.61%</strong> | Support: 7.71% | Lift: 1.2278</p>
+        </div>
+        
+        <div class='success-box'>
+        <h4>Rule 4: Senior + Low Interest Rate</h4>
+        <p><strong>IF:</strong> Interest Rate is Low AND Age is Senior (50+)</p>
+        <p><strong>THEN:</strong> No Default (Success)</p>
+        <p><strong>Confidence: 96.52%</strong> | Support: 8.24% | Lift: 1.2267</p>
+        </div>
+        
+        <div class='success-box'>
+        <h4>Rule 5: Senior + Low Rate → Large Loan Success</h4>
+        <p><strong>IF:</strong> Interest Rate is Low AND Age is Senior</p>
+        <p><strong>THEN:</strong> No Default on Very Large Loan</p>
+        <p><strong>Confidence: 90.32%</strong> | Support: 7.71% | Lift: 1.2265</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        fig = px.scatter(
-            rules_df.head(20),
-            x='Support',
-            y='Confidence',
-            size='Lift',
-            title="Rule Quality: Support vs Confidence (sized by Lift)",
-            labels={'Support': 'Support', 'Confidence': 'Confidence'},
-            color='Lift',
-            color_continuous_scale='Viridis'
-        )
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("""
+        ### 💡 Pattern Insights
+        
+        **Common Success Factors:**
+        
+        1. **Age 50+** appears in all top rules
+        2. **Low interest rates** (stable credit)
+        3. **Long employment** (experience)
+        
+        **Business Application:**
+        
+        ✅ **Auto-Approve** borrowers matching these patterns
+        
+        ✅ **Fast-Track** with minimal review
+        
+        ✅ **Premium Rates** for this low-risk segment
+        
+        **Coverage:**
+        - Affects ~7-8% of borrowers
+        - 96%+ success rate
+        - Enables automated decisions
+        """)
     
     st.markdown("---")
     
-    # Key patterns
-    st.subheader("💡 Key Patterns Discovered")
+    # Rule metrics visualization
+    st.subheader("📊 Rule Metrics Visualization")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Confidence distribution
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=[f"Rule {i}" for i in range(1, 16)],
+            y=top_rules['Confidence'] * 100,
+            marker_color='#28a745',
+            text=[f"{val:.2f}%" for val in top_rules['Confidence'] * 100],
+            textposition='outside'
+        ))
+        
+        fig.update_layout(
+            title="Confidence Scores (Top 15 Rules)",
+            xaxis_title="Rule",
+            yaxis_title="Confidence (%)",
+            height=400,
+            yaxis_range=[80, 100]
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    with col2:
+        # Support vs Confidence scatter
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=top_rules['Support'] * 100,
+            y=top_rules['Confidence'] * 100,
+            mode='markers+text',
+            marker=dict(
+                size=top_rules['Lift'] * 20,
+                color=top_rules['Lift'],
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title="Lift")
+            ),
+            text=[f"R{i}" for i in range(1, 16)],
+            textposition="top center"
+        ))
+        
+        fig.update_layout(
+            title="Support vs Confidence (bubble size = Lift)",
+            xaxis_title="Support (%)",
+            yaxis_title="Confidence (%)",
+            height=400
+        )
+        st.plotly_chart(fig, width='stretch')
+    
+    st.markdown("---")
+    
+    # Practical applications
+    st.subheader("🎯 Practical Business Applications")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("""
-        ### ✅ Success Patterns
-        **Strong indicators of repayment:**
-        - Senior age (55+)
-        - Low interest rates (<8%)
-        - Long employment (10+ years)
-        - High income
-        - Moderate DTI
-        
-        **Confidence:** 82-97%
-        """)
+        <div class='info-box'>
+        <h4>⚡ Auto-Approval System</h4>
+        <p><strong>Implementation:</strong></p>
+        <ul>
+        <li>Age ≥ 50 years</li>
+        <li>Interest rate ≤ 12%</li>
+        <li>Employment ≥ 5 years</li>
+        <li>Income ≥ $60K</li>
+        </ul>
+        <p><strong>Expected Outcome:</strong></p>
+        <ul>
+        <li>96%+ success rate</li>
+        <li>~7-8% of applications</li>
+        <li>Instant approval</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
-        ### ⚠️ Risk Patterns
-        **Warning signs:**
-        - Young age (<25)
-        - High interest rates (>16%)
-        - Short employment (<2 years)
-        - Low income (<$30K)
-        - High DTI (>5.0)
-        
-        **Note:** No high-confidence default rules found
-        """)
+        <div class='info-box'>
+        <h4>📊 Risk Scoring Enhancement</h4>
+        <p><strong>Boost scores for:</strong></p>
+        <ul>
+        <li>Senior borrowers (+50 points)</li>
+        <li>Low rates (+30 points)</li>
+        <li>Long employment (+20 points)</li>
+        <li>Large loan + senior (+40 points)</li>
+        </ul>
+        <p><strong>Benefits:</strong></p>
+        <ul>
+        <li>Better differentiation</li>
+        <li>Faster decisions</li>
+        <li>Lower review costs</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
-        ### 🎯 Business Actions
-        **Fast-track approvals for:**
-        - Senior borrowers with low rates
-        - Established employment history
-        - Income > $100K
-        
-        **Enhanced review for:**
-        - Young applicants
-        - High-rate loans
-        - Limited credit history
-        """)
+        <div class='info-box'>
+        <h4>💰 Premium Product Targeting</h4>
+        <p><strong>Market Segment:</strong></p>
+        <ul>
+        <li>Age 50+ with stability</li>
+        <li>Seeking large loans</li>
+        <li>Excellent payment history</li>
+        <li>~8% of market</li>
+        </ul>
+        <p><strong>Offer:</strong></p>
+        <ul>
+        <li>Premium rates (-1-2%)</li>
+        <li>Exclusive benefits</li>
+        <li>VIP service</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Pattern insights
-    st.subheader("📈 Pattern Insights")
-    
-    st.markdown("""
-    <div class="highlight">
-    <h4>🔍 Key Finding: Success is More Predictable Than Failure</h4>
-    
-    Our association rule mining revealed an important asymmetry: we found <strong>strong patterns for successful 
-    loan repayment</strong> (10 rules with 82-97% confidence) but <strong>no reliable rules predicting default</strong> 
-    (no rules met our 60% confidence threshold).
-    
-    <br><br>
-    
-    <strong>This means:</strong>
-    <ul>
-        <li>✅ We can confidently identify "safe bet" borrowers</li>
-        <li>⚠️ Default can occur through multiple unpredictable paths</li>
-        <li>🎯 Use success rules for fast-tracking approvals</li>
-        <li>🤖 Use classification models (XGBoost) to catch potential defaults</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    # Why no default-prediction rules
+    with st.expander("❓ Why No Rules Predicting Defaults?"):
+        st.markdown("""
+        ### Understanding the Asymmetry
+        
+        **Why we found 1,250 success rules but 0 default rules:**
+        
+        1. **Class Imbalance (87% no-default vs 13% default)**
+           - Success patterns are frequent and consistent
+           - Default patterns are rare and varied
+           - Apriori requires minimum support threshold (5%)
+        
+        2. **Default Complexity**
+           - Defaults happen for many different reasons
+           - No single pattern reaches 5% support
+           - Each default scenario is relatively unique
+        
+        3. **Success Simplicity**
+           - Success has predictable patterns
+           - Senior + Stable + Low-Rate = Success
+           - Clear, repeatable combinations
+        
+        **Business Implication:**
+        - ✅ Use rules to **fast-track good borrowers** (96% confidence)
+        - ❌ Use **ML models** (XGBoost) to **detect defaults** (76.51% ROC-AUC)
+        - 🎯 **Complementary approaches** for complete solution
+        
+        **This is actually ideal:**
+        - Rules handle the easy 49% (low-risk clusters)
+        - Models handle the complex remaining 51%
+        - Best of both worlds!
+        """)
 
 # ============================================================================
 # PAGE 6: RECOMMENDATIONS
@@ -1011,7 +1566,7 @@ elif page == "💡 Recommendations":
     st.subheader("📋 Executive Summary")
     
     st.markdown("""
-    Based on our analysis of 286,840 borrower records using classification, clustering, and 
+    Based on our analysis of **286,840 borrower records** using classification, clustering, and 
     association rule mining, we provide the following strategic recommendations to optimize 
     lending operations, reduce default risk, and improve profitability.
     """)
@@ -1039,14 +1594,14 @@ elif page == "💡 Recommendations":
             - Restrict/reject Cluster 4 (5% of applicants, 30% default)
             
             **2. Deploy XGBoost Model**
-            - 76.5% ROC-AUC provides reliable predictions
-            - Focus on age, risk score, and interest rate
-            - Catch 67% of defaults while maintaining reasonable approval rates
+            - **76.51% ROC-AUC** provides reliable predictions
+            - Focus on age (32.8%), interest rate (16.7%), and employment (14.4%)
+            - Catch **67% of defaults** while maintaining reasonable approval rates
             
             **3. Use Association Rules for Fast-Tracking**
-            - 10 high-confidence rules (82-97%) identify safe borrowers
+            - 10 high-confidence rules (**82-97%**) identify safe borrowers
             - Senior + Low Rate + Stable Employment = Automatic approval
-            - Reduces manual review workload by ~40%
+            - Reduces manual review workload by **~40%**
             """)
         
         with col2:
@@ -1054,14 +1609,14 @@ elif page == "💡 Recommendations":
             ### Expected Impact
             
             **Risk Reduction:**
-            - 🎯 30-40% reduction in defaults through better screening
+            - 🎯 **30-40% reduction** in defaults through better screening
             - 💰 Millions in potential loss avoidance
             - 📈 Improved portfolio quality over time
             
             **Approval Efficiency:**
-            - ⚡ 49% of applications fast-tracked (low-risk clusters)
-            - 🔍 Focused review on 41% high-risk segment
-            - ⏱️ 50% reduction in average approval time
+            - ⚡ **49% of applications** fast-tracked (low-risk clusters)
+            - 🔍 Focused review on **41%** high-risk segment
+            - ⏱️ **50% reduction** in average approval time
             
             **Customer Experience:**
             - ✅ Faster decisions for qualified borrowers
@@ -1082,7 +1637,7 @@ elif page == "💡 Recommendations":
         }
         pricing_df = pd.DataFrame(pricing_data)
         
-        st.dataframe(pricing_df, use_container_width=True, hide_index=True)
+        st.dataframe(pricing_df, width='stretch', hide_index=True)
         
         st.markdown("""
         ### Pricing Justification
@@ -1092,7 +1647,7 @@ elif page == "💡 Recommendations":
         - **High Risk (17-24% default):** Premium pricing to offset expected losses
         - **Extreme Risk (30%+ default):** Not viable even with high rates
         
-        **Expected Outcome:** 15-20% improvement in risk-adjusted returns
+        **Expected Outcome:** **15-20% improvement** in risk-adjusted returns
         """)
     
     with tab3:
@@ -1108,19 +1663,19 @@ elif page == "💡 Recommendations":
             - Clusters 0, 3, 5, 6, 8
             - Matches success association rules
             - Age 40+, Income $60K+, DTI <2.0
-            - Decision time: <5 minutes
+            - Decision time: **<5 minutes**
             
             **Tier 2: Standard Review (10% of applications)**
             - Cluster 7
             - Model score 0.6-0.8
             - Additional documentation required
-            - Decision time: 1-2 days
+            - Decision time: **1-2 days**
             
             **Tier 3: Enhanced Review (36% of applications)**
             - Clusters 1, 2, 9
             - Model score 0.4-0.6
             - Collateral assessment required
-            - Decision time: 3-5 days
+            - Decision time: **3-5 days**
             
             **Tier 4: Auto-Decline (5% of applications)**
             - Cluster 4
@@ -1134,20 +1689,20 @@ elif page == "💡 Recommendations":
             ### Performance Metrics
             
             **Current State:**
-            - ⏱️ Average approval time: 5 days
-            - 👥 Manual review: 100% of applications
-            - 📊 Default rate: 12.75%
+            - ⏱️ Average approval time: **5 days**
+            - 👥 Manual review: **100%** of applications
+            - 📊 Default rate: **12.75%**
             - 💰 Operating cost: High
             
             **Target State:**
-            - ⏱️ Average approval time: 2 days (60% improvement)
-            - 👥 Manual review: 46% of applications
-            - 📊 Default rate: 8-9% (30% reduction)
-            - 💰 Operating cost: 40% lower
+            - ⏱️ Average approval time: **2 days (60% improvement)**
+            - 👥 Manual review: **46%** of applications
+            - 📊 Default rate: **8-9% (30% reduction)**
+            - 💰 Operating cost: **40% lower**
             
             **ROI:**
-            - 💵 $2-3M annual cost savings
-            - 📈 20% increase in approval capacity
+            - 💵 **$2-3M annual** cost savings
+            - 📈 **20% increase** in approval capacity
             - ✅ Better customer satisfaction
             - 🎯 Competitive advantage
             """)
@@ -1194,7 +1749,26 @@ elif page == "💡 Recommendations":
         }
         metrics_df = pd.DataFrame(metrics_data)
         
-        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+        st.dataframe(metrics_df, width='stretch', hide_index=True)
+        
+        st.markdown("---")
+        
+        # Final summary
+        st.markdown("""
+        <div class='success-box'>
+        <h3>🎯 Bottom Line</h3>
+        <p>By combining <strong>XGBoost classification (76.51% ROC-AUC)</strong>, <strong>K-Means clustering (10 segments)</strong>, 
+        and <strong>Apriori association rules (96%+ confidence)</strong>, we can:</p>
+        <ul>
+        <li><strong>Reduce defaults by 30-40%</strong> through better risk segmentation</li>
+        <li><strong>Cut approval time by 60%</strong> via automated decision-making</li>
+        <li><strong>Lower operating costs by $2-3M/year</strong> with reduced manual reviews</li>
+        <li><strong>Improve customer experience</strong> with faster, fairer decisions</li>
+        </ul>
+        <p><strong>This data-driven approach transforms lending from reactive to proactive, 
+        from intuition-based to evidence-based, and from one-size-fits-all to personalized risk management.</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ============================================================================
 # FOOTER
@@ -1205,6 +1779,10 @@ st.markdown("""
 <div style='text-align: center; color: gray; padding: 20px;'>
     <p><strong>InsightLens: Financial Behavior Analytics</strong></p>
     <p>Group 3: Kai Martin, Deborah Robinson | CS633: Data Mining</p>
+    <p>Monroe University | Professor Mahmud Islam</p>
     <p>Powered by Streamlit • XGBoost • K-Means • Apriori</p>
+    <p style='margin-top: 10px; font-size: 0.9em;'>
+        📊 286,840 Records Analyzed | 🤖 76.51% ROC-AUC | 👥 10 Segments | 🔗 3,132 Rules
+    </p>
 </div>
 """, unsafe_allow_html=True)
