@@ -221,13 +221,13 @@ st.sidebar.info(f"📈 Showing {len(filtered_df):,} of {len(df):,} records ({len
 
 if page == "🏠 Overview":
     st.title("🏠 InsightLens: Financial Behavior Analytics")
-    st.markdown("### Comprehensive Analysis of Credit Risk and Loan Default Patterns")
+    st.markdown("### Analysis of Credit Risk and Loan Default Patterns")
     st.markdown("---")
     
     # Project summary
     st.markdown("""
     <div class='success-box'>
-    <h3>✅ Project Complete</h3>
+    <h3>Group 3 Project</h3>
     <p>This dashboard presents the complete results from our comprehensive data mining analysis 
     combining two major financial datasets: Credit Risk (32,581 records) and Loan Default (255,347 records) 
     for a total of <strong>286,840 borrower records</strong> after preprocessing.</p>
