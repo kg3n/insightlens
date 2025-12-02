@@ -2,7 +2,7 @@
 
 Helping Banks make smarter decisions.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)] (https://insightlens-hhdy9tvnvw6brpcfzy4fom.streamlit.app/)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://insightlens-hhdy9tvnvw6brpcfzy4fom.streamlit.app/)
 
 ### How to run it on your own machine
 
